@@ -1,1 +1,1350 @@
+InitialObjectDescriptor {
+	objectDescriptorID 100
+	audioProfileLevelIndication 255
+	visualProfileLevelIndication 254
+	sceneProfileLevelIndication 1
+	graphicsProfileLevelIndication 1
+	ODProfileLevelIndication 1
+	esDescr [
+		ES_Descriptor {
+			ES_ID 1
+			decConfigDescr DecoderConfigDescriptor {
+				streamType 3
+				decSpecificInfo BIFSConfig {
+					useNames true
+					isCommandStream true
+					pixelMetric true
+					pixelWidth 400
+					pixelHeight 600
+				}
+			}
+		}
+		ES_Descriptor {
+			ES_ID 2
+			decConfigDescr DecoderConfigDescriptor {
+				streamType 1
+			}
+		}
+	]
+}
+#THIS WILL BE THE VUFORIA PROTO FOR CAMERA RECOGNITION
+EXTERNPROTO VUFORIA_TEXTURE [
+	exposedField SFBool enabled FALSE
+]"urn:inet:gpac:builtin:VuforiaTexture"
+#THIS IS THE IMAGE RECOGNITION PROTO
+EXTERNPROTO LOCIMG [
+    exposedField      SFString     videoSource				""
+    exposedField      MFString     targetResources 		[]
+	exposedField      MFString     targetResourcesTypes 	[]
+	exposedField      SFInt32      enabled 				0
+	exposedField	  SFInt32		maximumDelay			200
+	exposedField	  SFInt32		optimalDelay			50
+	exposedField	  MFVec2f		recognitionRegion		[]
+    eventOut          MFInt32      onRecognition
+    eventOut          MFVec3f      onTranslation
+    eventOut          MFRotation   onRotation
+    eventOut          SFInt32      onError
+	eventOut		  SFBool		onTargetResourcesLoaded
+] "urn:inet:gpac:builtin:LocImg"
+#THIS PROTO DEFINES 3D AR OBJECTS THAT WILL BE USED IN THE SCENE
+PROTO AR_OBJECT[
+exposedField	SFInt32	choice	0
+exposedField	SFInt32	ar_id	0
+exposedField	SFString	url		"11"
+exposedField	SFVec3f	scale	4 4 4  
+exposedField	SFVec3f	translation	0 0 0  
+eventIn			SFRotation	rota	
+eventOut 		SFBool			unlock
+eventOut 		SFInt32		id
+eventOut 		MFString		lock_image
+]
+{
+DEF 3DSWITCH Switch {
+	whichChoice	   IS choice
+	choice [
+	Group{
+	children[
+DEF TRANS 	Transform{
+	scale IS scale
+	translation IS translation
+	rotation 	IS rota
+	children[
+	#THIS TOUCHSENSOR WILL BE USED TO HIDE THE 3D OBJECT WHEN FOUND ON A SCENE AND HAS BEEN CLICKED ON
+	DEF TS TouchSensor{
+				enabled TRUE
+				}
+	DEF INLINE Inline{
+			url IS url
+			}
+		]
+	}]
+	}
+	]
+	}
+DEF 3Dscript Script{
+eventIn		SFBool		touchSensor	
+field	SFNode	js_transform	USE TRANS
+field	SFNode	js_3d	USE 3DSWITCH
+field		SFInt32		js_id 	IS		ar_id
+eventOut	SFBool js_unlock	IS unlock
+eventOut	SFInt32 js_id	IS id
+eventOut	MFString js_lock_image	IS lock_image
+
+url["javascript:
+function touchSensor(){
+		js_unlock=true;
+		js_lock_image='18';
+		js_3d.whichChoice=-1;}
+"]
+
+}
+ROUTE TS.isActive TO 3Dscript.touchSensor
+}
+#THIS PROTOTYPE DEFINES IMAGES THAT ARE CLICKABLE
+PROTO IMAGE [
+    exposedField MFString 	url				[]
+	exposedField SFVec2f	size			100 60
+	exposedField SFVec2f 	translation 	0 0
+    exposedField SFVec2f 	scale 			1 1
+	exposedField SFFloat 	rotationAngle 	0.0
+	exposedField SFInt32	image_id		99
+	exposedField SFBool	enabled			TRUE
+	eventOut	 SFInt32	Onclick			
+]
+{
+	Transform2D {
+		translation 	IS translation
+		rotationAngle	IS rotationAngle
+		scale 			IS scale
+		children [
+		DEF TS TouchSensor{
+				enabled IS enabled
+				}
+			Shape {
+                geometry Rectangle {
+					size IS size
+				}
+				appearance Appearance {
+					texture ImageTexture {
+						url IS url
+					}
+					material Material2D {
+						lineProps LineProperties {
+							width 0
+						}
+					}
+				}
+			}
+]
+	}
+	
+	DEF SCRIPTI Script{
+	field		SFInt32		js_id 	IS		image_id
+	eventIn		SFBool		touchSensor
+	eventOut	SFInt32 	id 		IS 		Onclick
+	url["javascript:
+		function touchSensor(val){
+			if(val){
+			id=js_id;
+			}
+			}
+		"]
+}
+	ROUTE TS.isActive TO SCRIPTI.touchSensor
+}
+#THIS PROTOTYPE DEFINES A TEXT LAYER, IT WILL MAKE IT EASIER FOR MAKE TEXT NODES BY ONLY DEFINING THE STRING
+PROTO TEXT [
+    exposedField SFColor 	emissiveColor	1 1 1
+	exposedField MFString	string			"default text"
+	exposedField SFFloat 	size 			10
+	exposedField SFVec2f	translation 	0 0
+]
+{
+Transform2D{
+translation IS translation
+children[
+Shape {
+			appearance Appearance {
+				material Material2D {
+					emissiveColor IS emissiveColor
+					filled TRUE
+				}
+			}
+			geometry Text {
+				string IS string
+				fontStyle FontStyle {
+					justify ["MIDDLE" "MIDDLE"]
+					size IS size
+				}
+			}
+		}
+		]
+		}
+}
+#THIS PROTOTYPE THE TEMPLATE OF A RIDDLE IN THE THEME CHOICE SCENE, IT WILL MAKE INTERACTIF DESIGN EASIER AND MANAGEMENT EASIER
+#THERE ARE 16 RIDDLES, 4 THEME
+PROTO RIDDLE [
+	exposedField	SFBool		unlocked		FALSE
+	exposedField	MFString	url		"17"
+	exposedField	SFInt32	riddle_id	100
+	exposedField	SFVec2f	translation	0 0
+	exposedField 	SFVec2f	scale		1 1
+	exposedField	MFString	string		"default text"
+	exposedField	SFFloat	stringsize	40.0
+	eventOut	 	SFInt32	Onclick	
+	]
+	{
+	Transform2D{
+		translation IS translation
+		scale IS scale
+		
+		children[
+		DEF TR TouchSensor{
+		enabled IS unlocked
+			}
+		DEF THEME_LOCK IMAGE {
+			url IS url
+			size 50 50
+            translation -150 0
+            rotationAngle 0
+			enabled FALSE
+		}
+		DEF RIDDLE_TEMPLATE_BACKGROUND IMAGE {
+			image_id IS riddle_id
+			url "23"
+			size 300 80
+            translation 20 0
+            rotationAngle 0
+			enabled FALSE
+		}
+		TEXT{
+			emissiveColor	0 0 0
+			string			IS string
+			size			IS stringsize
+			translation		20 0
+			}
+		]
+	}
+	DEF SCRIPTR Script{
+	field 	SFNode js_id USE RIDDLE_TEMPLATE_BACKGROUND
+	eventIn SFBool touchSensor
+	eventOut SFInt32 id IS Onclick
+	url["javascript:
+		function touchSensor(val){
+			if(val){
+			id=js_id.image_id;
+				}
+			}
+		"]
+}
+	ROUTE TR.isActive TO SCRIPTR.touchSensor
+
+	}
+#THIS IS A MAPMARKER PROTO, WE DECIDED IN THE FUTURE TO ONLY MAKE ONE MARKER BUT WHICH HAS 4 DIFFERENT COORDINATES FOR 4 DIFFERENT THEME SCENES
+#WE WILL BE USING A 50 METER RADIUS
+PROTO MapMarker[
+exposedField	SFInt32		radius		50
+exposedField	SFBool			enabled		FALSE
+eventIn			SFInt32		marker_id	
+eventIn			SFVec2f		player_pos	
+eventOut		SFBool		onPlayerAround		
+]
+{
+#THIS GROUP WAS USED FOR DEBUGGING ON THE PHONE, IT WILL DISPLAY THE DISTANCE FROM A THEME CENTER.
+#TO ACTIVATE IT UNCOMMENT EVERY ***DISTANCE COMMENT****
+# Group{
+# children[
+# DEF TESTER RIDDLE{
+			# riddle_id 15
+			# url		"18"
+			# translation 0 50
+			# string "TEST CASE DISTANCE"
+			# unlocked 	TRUE
+			# }]}
+#TIMESENSOR WILL ENABLE A RECURRENT COMPUATION OF DISTANCE FROM A THEME CENTER AREA
+DEF TIMEMM	TimeSensor{
+				enabled		TRUE
+				loop 		TRUE
+				startTime	0
+				cycleInterval 1
+				stopTime	1			
+	}
+DEF MarkerScript	Script{
+field		SFNode		js_stop		USE 	TIMEMM
+field		SFInt32		js_radius			IS	radius
+field		SFInt32		js_marker			IS 	marker_id
+field		SFVec2f		js_player_pos			IS 	player_pos
+field		SFVec2f		js_position	 		0 0	
+field 		SFBool		js_enabled			IS 	enabled
+#***DISTANCE COMMENT****
+#field		SFNode		js_test		USE 	TESTER
+eventIn		SFBool		update
+eventIn		SFVec2f		updateplayer		IS 	player_pos
+eventIn		SFInt32		update_marker	IS	marker_id
+eventOut	SFBool	playeraround	IS	onPlayerAround	
+
+url["javascript:
+			
+	function initialize(){
+		# Equatorial radius (m)
+		eqRadius			= 6378137;
+		#print('---------------we are in the MARKER initialize function---------------');
+			}
+	function update(val){
+		if(js_marker==0){
+			js_stop.stopTime+=1;
+			#Gymnasium area
+			js_position[0]=48.6252139;
+			js_position[1]=2.4447221;
+			distance();}
+		if(js_marker==1){
+			js_stop.stopTime+=1;
+			#foyer area
+			js_position[0]=48.6241644;
+			js_position[1]=2.4445856;
+			distance();}
+		if(js_marker==2){
+			js_stop.stopTime+=1;
+			#u7 area
+			js_position[0]=48.6238241;
+			js_position[1]=2.4462663;
+			distance();}
+		if(js_marker==3){
+			js_stop.stopTime+=1;
+			#forum area
+			js_position[0]=48.6247853;
+			js_position[1]=2.4433124;
+			distance();}
+		}
+#THIS TWO FUNCTIONS UPDATE DIFFERENT VARIABLES THAT WE USE
+#THE MARKER ID GIVES US WHICH THEME WAS USED, AND THEREFORE WHICH THEME POSITION INTREST US FOR DISTANCE COMPUTATION
+#THE PLAYER POSITION IS RECIEVED FROM THE PLAYER PROTO FROM THE GPS FUNCTION
+	function update_marker(val){
+			js_marker=val;
+			}
+	function updateplayer(val){
+			js_player_pos[0]=val[0];
+			js_player_pos[1]=val[1];
+			}
+#THIS IS AN EASY FUNCTION TO COMPUTE DISTANCES FROM TWO LATTITUDE AND LONGITUDE VALUES			
+	function	distance(){
+		range=dis(js_position[0],js_position[1],js_player_pos[0],js_player_pos[1]);
+		print('------js_position[0] is :'+js_position[0].toString()+'----');
+		print('------js_position[1] is :'+js_position[1].toString()+'----');
+		print('------js_player_pos[0] is :'+js_player_pos[0].toString()+'----');
+		print('------js_player_pos[1] is :'+js_player_pos[1].toString()+'----');
+		#***DISTANCE COMMENT****
+		#js_test.string='----'+range.toString()+'----';
+		if(range<js_radius){
+		#are we near the theme area 
+			js_enabled=true;
+			playeraround=true;
+				}
+		else{
+		#are we near the theme area 
+			playeraround=false;
+			js_enabled=false;
+				}
+	}
+	
+	function dis(lat1, long1, lat2, long2) {
+		d2r 	= Math.PI / 180;
+		d_latt 	= (lat2 - lat1) * d2r;
+		d_long 	= (long2 - long1) * d2r;
+		a 		= Math.sin(d_latt/2)*Math.sin(d_latt/2) + Math.cos(lat1 * d2r) * Math.cos(lat2 * d2r) * Math.sin(d_long/2)*Math.sin(d_long/2);
+		c 		= 2 * Math.atan2(Math.sqrt(a),  Math.sqrt(1-a));
+		return 6371 * c*1000;
+		}
+		"
+		]
+	}
+ROUTE TIMEMM.fraction_changed TO MarkerScript.update
+}
+#THIS IS THE PLAYER PROTO THAT GETS PLAYER POSITION
+PROTO PLAYER[
+exposedField	SFInt32	player_id	0
+eventOut		SFVec2f	updated_position
+]
+{
+#FOR POSITION DEBUG UNCOMMENT ***PLAYER POSITION***
+#***PLAYER POSITION***
+#Group{
+# children[
+# DEF TESTER RIDDLE{
+			# riddle_id 15
+			# url		"18"
+			# translation 0 150
+			# string "Position of player"
+			# unlocked 	TRUE
+			# }]}
+DEF TIMEP	TimeSensor{
+				enabled		TRUE
+				loop 		TRUE
+				startTime	0
+				cycleInterval 1
+				stopTime	1
+				
+	}
+DEF PlayerScript	Script{
+field		SFNode		js_stop		USE 	TIMEP
+#***PLAYER POSITION***
+#field		SFNode		js_test		USE 	TESTER
+eventIn		SFBool			update
+eventIn		SFVec3f		updateGPS
+eventOut	SFVec2f		playerPosition			IS  updated_position
+
+
+url["javascript:
+			
+	function initialize(){
+		#print('---------------we are in the PLAYER initialize function---------------');
+		}
+		
+	function update(val){
+		js_stop.stopTime+=1;
+		#***PLAYER POSITION***
+		#js_test.string='---'+playerPosition[0].toString()+'---'+playerPosition[1].toString()+'---';
+			}
+	function updateGPS(gpsPos) {
+	#THIS IS WHERE THE PROBLEM IS, WE NEVER GET THE PLAYER POSITION EVEN THOUGH WE USE A GPS SENSOR
+		a=gpsPos.x;
+		b=gpsPos.y;
+		playerPosition = new SFVec2f (a, b);
+	}
+			"
+		]}
+#GPS SENSOR
+DEF UI_PLAYER_GPS_SENS InputSensor {
+		url "201"
+		buffer {
+			REPLACE PlayerScript.updateGPS BY 0 0 0
+		}
+	}
+		
+		
+#ROUTE FOR POSITION UPDATE EVERY CPU TIME
+ROUTE TIMEP.fraction_changed TO PlayerScript.update
+}
+
+OrderedGroup {
+children[
+
+############HERE WE CAN CHOSE THE THEME SCENE############
+
+	DEF THEME_SCENE Switch{
+	whichChoice	   0
+	choice [
+	Group{
+		children[
+	DEF THEME_BACKGROUND IMAGE {
+			enabled	FALSE
+			url "11"
+			size 400 600
+            translation 0 0
+            rotationAngle 0
+			}
+	#CHOOSE FIRST THEME
+	DEF THEME_1 IMAGE {
+			image_id 0
+			url "12"
+			size 100 100
+            translation -150 -250
+            rotationAngle 0
+		}
+	#CHOOSE SECOND THEME
+    DEF THEME_2 IMAGE {
+			image_id 1
+			url "13"
+			size 100 100
+            translation -50 -250
+            rotationAngle 0
+		}
+	#CHOOSE THIRD THEME
+	DEF THEME_3 IMAGE {
+			image_id 2
+			url "14"
+			size 100 100
+            translation 50 -250
+            rotationAngle 0
+		}
+	#CHOOSE FOURTH THEME
+	DEF THEME_4 IMAGE {
+			image_id 3
+			url "15"
+			size 100 100
+            translation 150 -250
+            rotationAngle 0
+		}
+	DEF THEME_ID_BACKGROUND IMAGE {
+			enabled	FALSE
+			url "19"
+			size 250 90
+            translation 20 245
+            rotationAngle 0
+				}
+	DEF LOGO IMAGE {
+		url "16"
+		size 150 150
+		translation -150 250
+		rotationAngle 0
+}
+			]
+		}
+	Group{
+		children[
+		
+	#######A RIDDLE HAS BEEN CHOSEN########
+	
+		DEF RIDDLE_BACKGROUND IMAGE {
+			enabled	FALSE
+			url "20"
+			size 400 600
+            translation 0 0
+            rotationAngle 0
+			}
+		DEF RIDDLE_TO_CAMERA IMAGE {
+			image_id 40
+			url "22"
+			size 70 70
+            translation 120 -250
+            rotationAngle 0
+			}
+		DEF BACK_TO_THEME IMAGE{
+			image_id 100
+			url "21"
+			size 80 80
+            translation -120 -250
+            rotationAngle 0
+			}
+		DEF RIDDLE_CHOICE Switch{
+			whichChoice	-1
+			choice[
+		#####EVERY RIDDLE######
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Bouncing from hand"
+						" to hand, look underneath"
+						" the circle of victory and"
+						" you will taste it. "]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Where it comes and"
+						"goes, get to the very"
+						" first one and catch"
+						"me in your net."	]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["There is no place"
+						" suffer for the purpose,"
+						" find the "]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["I get beaten yet never"
+						" hit back , find me and "
+						"I will tell you what"
+						" you need to know"]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["I am the old temple "
+						"of the fairy where malt"
+						" and hop flow, find the "
+						"source and you will "
+						"know. "]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Lying on the table,"
+						" I shall never fall"
+						" into this holes or"
+						" you will feel my wrath. "	]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Home of the apprentices,"
+						" look at my entrance"
+						" and understand"	]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["I lie within the ash"
+						" of years of socialization"]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Your dirty armors "
+						"i shall eat."
+						" Drown and shake"
+						" them i will."
+						" For at the end"
+						" reborn and shinning"
+						" they will be. "
+						"Gaze at my mouth"
+						" if you wish to continue. "]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["The messenger feeds me"
+						" your messages.I keep"
+						"them warm and safe till"
+						" your return. In "
+						"front of me i"
+						" see moving machines"
+						" that carry"
+						" you, look at my face"
+						" and thank"
+						" me for my work. "	]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Give me your destination,"
+						" I will make "
+						"you fly and fall,"
+						" but at the end I"
+						" will get you"
+						" there. Look at"
+						" destinations"
+						" if you wish to pass "	]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["I might be small,"
+						" often no one sees"
+						" me or is aware of me,"
+						" but I have great power,"
+						" for i chose who goes"
+						" home or who freezes "
+						"in the cold. By the"
+						" slap of the wrist"
+						" I make my decisions "	]	
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Where I once fed you"
+						" food i now feed you"
+						" knowledge. At my center"
+						" look up and be amazed."]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Stage to the many, "
+						"Savants and corpretists,"
+						" I too have my place."
+						" With my army of "
+						"black and white"
+						" soldiers, I amaze."
+						" Only mastered"
+						" by the few I entertain."
+						" Pay tribute to my army"
+						" if you wish to pass"]		
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["Give me your wealth, "
+						"i will break it and"
+						" give it back to you."
+						" Parts of 5"
+						" or 10's i will only"
+						" take for this is my"
+						" only wish. Gaze"
+						" upon me and the answers"
+						" you will find "		]
+		size			30
+		translation		0 0
+		}
+		TEXT{
+		emissiveColor	0 0 0
+		string			["OUR 16 RIDDLE " "second line"]		
+		size			30
+		translation		0 0
+		}
+			]
+		}
+			]
+		}
+	Group{
+		children[
+		DEF CAMERA	Transform2D {
+					rotationAngle -1.57
+                    children [
+                        Shape {
+                            appearance Appearance {
+                                texture DEF VUFORIATEXTURE VUFORIA_TEXTURE {}
+                            }
+							geometry Rectangle {
+							size 1280 720}
+                        }
+                    ]
+                }
+		DEF BACK_TO_RIDDLE IMAGE{
+			image_id 200
+			url "21"
+			size 80 80
+            translation -120 -250
+            rotationAngle 0
+			}
+			]
+		}
+	]
+	}	
+DEF MAIN Switch {
+	whichChoice	   0
+	choice [
+	Group{
+	children [
+	####USE OF RIDDLE TEMPLATE#####
+		DEF THEME_1_1 RIDDLE{
+			riddle_id 11
+			url		"18"
+			translation 0 150
+			string "First Riddle"
+			unlocked 	TRUE
+			
+			}
+		DEF THEME_1_2 RIDDLE{
+			riddle_id 12
+			translation 0 50
+			string "Second Riddle"
+			}
+		DEF THEME_1_3 RIDDLE{
+			riddle_id 13
+			translation 0 -50
+			string "Third Riddle"
+			}
+		DEF THEME_1_4 RIDDLE{
+			riddle_id 14
+			translation 0 -150
+			string "Fourth Riddle"
+		}
+		TEXT{
+		emissiveColor	1 1 1
+		string			"THEME 1"		
+		size			40
+		translation		20 250
+		}
+		]}
+	Group{
+	children [		
+	DEF THEME_2_1 RIDDLE{
+			riddle_id 15
+			url		"18"
+			translation 0 150
+			string "First Riddle"
+			unlocked 	TRUE
+			}
+	DEF THEME_2_2 RIDDLE{
+			riddle_id 16
+			translation 0 50
+			string "Second Riddle"
+			}
+	DEF THEME_2_3 RIDDLE{
+			riddle_id 17
+			translation 0 -50
+			string "Third Riddle"
+			}
+	DEF THEME_2_4 RIDDLE{
+			riddle_id 18
+			translation 0 -150
+			string "Fourth Riddle"
+		}
+		TEXT{
+		emissiveColor	1 1 1
+		string			"THEME 2"		
+		size			40
+		translation		20 250
+		}
+		]}	
+	Group{
+	children [	
+		DEF THEME_3_1 RIDDLE{
+			riddle_id 19
+			url		"18"
+			translation 0 150
+			string "First Riddle"
+			unlocked 	TRUE
+			}
+		DEF THEME_3_2 RIDDLE{
+			riddle_id 20
+			translation 0 50
+			string "Second Riddle"
+			}
+		DEF THEME_3_3 RIDDLE{
+			riddle_id 21
+			translation 0 -50
+			string "Third Riddle"
+			}
+		DEF THEME_3_4 RIDDLE{
+			riddle_id 22
+			translation 0 -150
+			string "Fourth Riddle"
+		}
+		TEXT{
+		emissiveColor	1 1 1
+		string			"THEME 3"		
+		size			40
+		translation		20 250
+		}
+		]}
+	Group{
+	children [		
+		DEF THEME_4_1 RIDDLE{
+			riddle_id 23
+			url		"18"
+			translation 0 150
+			string "First Riddle"
+			unlocked 	TRUE
+			}
+		DEF THEME_4_2 RIDDLE{
+			riddle_id 24
+			translation 0 50
+			string "Second Riddle"
+			}
+		DEF THEME_4_3 RIDDLE{
+			riddle_id 25
+			translation 0 -50
+			string "Third Riddle"
+			}
+		DEF THEME_4_4 RIDDLE{
+			riddle_id 26
+			translation 0 -150
+			string "Fourth Riddle"
+		}
+		TEXT{
+		emissiveColor	1 1 1
+		string			"THEME 4"		
+		size			40
+		translation		20 250
+		}
+			]
+		}	
+	]
+}
+DEF COMPASS Switch {
+whichChoice		-1
+choice[
+
+#####DEFINITION OF COMPASS, TO KNOW WHETHER WE ARE NEAR OR NOT#####
+
+	DEF NEAR IMAGE {
+			enabled FALSE
+			image_id 1
+			url "25"
+			size 100 100
+            translation 150 250
+            rotationAngle 0
+		}
+	DEF FAR IMAGE {
+			enabled FALSE
+			image_id 1
+			url "24"
+			size 100 100
+            translation -150 250
+            rotationAngle 0
+		}
+	]
+}
+
+DEF LAYER3D_VUFORIA Layer3D {
+	children[
+	# DEF VIEW3D Viewpoint {
+                            # position 0 0 0
+                            # jump FALSE
+                            # orientation 1 0 0 3.14
+                        # }
+	####OUR DIFFERENT 3D AR OBJECTS
+	DEF SWITCH_MODEL Switch {
+	whichChoice -1
+		choice [
+	DEF 3D0 AR_OBJECT{
+		url "26"
+		scale	0.01 0.01 0.01
+		}
+	DEF 3D1 AR_OBJECT{
+		 url "27"
+		 scale	0.1 0.1 0.1 
+		}
+	DEF 3D2 AR_OBJECT{
+		 url "28"
+		 scale	0.1 0.1 0.1
+		}
+	DEF 3D3 AR_OBJECT{
+		 url "29"
+		 scale	0.5 0.5 0.5
+		}	
+	DEF 3D4 AR_OBJECT{
+		 url "30"
+		 scale	0.05 0.05 0.05
+		}	
+	DEF 3D5 AR_OBJECT{
+		 url "31"
+		 scale	0.05 0.05 0.05
+		 }
+	DEF 3D6 AR_OBJECT{
+		 url "32"
+		 scale	0.1 0.1 0.1 
+		}
+	DEF 3D7 AR_OBJECT{
+		 url "33"
+		 scale	0.05 0.05 0.05
+		}
+	DEF 3D8 AR_OBJECT{
+		 url "34"
+		 scale	0.001 0.001 0.001
+		}
+	DEF 3D9 AR_OBJECT{
+		 url "35"
+		 scale	1 1 1
+		}
+	DEF 3D10 AR_OBJECT{
+		 url "36"
+		 scale	0.05 0.05 0.05
+		}
+	DEF 3D11 AR_OBJECT{
+		 url "37"
+		 scale	0.0005 0.0005 0.0005
+		}
+	DEF 3D12 AR_OBJECT{
+		 url "38"
+		 scale	0.1 0.1 0.1
+		}
+	DEF 3D13 AR_OBJECT{
+		 url "39"
+		 scale	0.001 0.001 0.001
+		}
+	DEF 3D14 AR_OBJECT{
+		 url "40"
+		 scale	0.001 0.001 0.001
+		}
+	DEF 3D15 AR_OBJECT{
+		 url "41"
+		 scale	0.1 0.1 0.1
+		 }
+			]
+		}
+	]	
+}
+DEF LOC_IMG LOCIMG {
+	targetResourcesTypes ["99"]
+	#############THIS WILL BE USED TO CHANGE DATABASES FOR IMAGE RECOGNITION
+	targetResources ["/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml"]
+	#targetResources ["/storage/emulated/0/Treasure/database/fire/Treasure_Hunt.xml"]
+	enabled 1
+}
+DEF MARKER1 MapMarker{}
+DEF	Player1	PLAYER{}
+
+DEF SCRIPT Script{
+	eventIn	SFBool	evaluate
+	eventIn SFInt32 appear
+	eventIn	SFBool	player
+	eventIn MFInt32 onRecognition
+	eventIn MFVec3f onTranslation
+	eventIn MFRotation onRotation
+	eventIn	SFInt32	HideArObject
+	field	SFNode js_main		USE 	MAIN
+	field	SFNode js_scene		USE 	THEME_SCENE
+	field  SFNode js_riddle		USE		RIDDLE_CHOICE
+	field 	SFNode	js_page		USE		BACK_TO_THEME
+	field SFNode switchModel USE SWITCH_MODEL
+	field SFNode vuforiaTexture USE VUFORIATEXTURE
+	field	SFNode	js_mark		USE		MARKER1
+	field 	SFNode	js_compass	USE 	COMPASS
+	field 	SFNode	js_rec	USE 	LOC_IMG
+	####THIS WAS DONE BEFORE FINDING OUT THAT CHOICE IS AN ATTRIBUTE THAT CAN BE USED IN JAVASCRIPT USING .choice[x], SO THE CODE CAN BE SMALLER
+	field 	SFNode	js_0	USE 	3D0
+	field 	SFNode	js_1	USE 	3D1
+	field 	SFNode	js_2	USE 	3D2
+	field 	SFNode	js_3	USE 	3D3
+	field 	SFNode	js_4	USE 	3D4
+	field 	SFNode	js_5	USE 	3D5
+	field 	SFNode	js_6	USE 	3D6
+	field 	SFNode	js_7	USE 	3D7
+	field 	SFNode	js_8	USE 	3D8
+	field 	SFNode	js_9	USE 	3D9
+	field 	SFNode	js_10	USE 	3D10
+	field 	SFNode	js_11	USE 	3D11
+	field 	SFNode	js_12	USE 	3D12
+	field 	SFNode	js_13	USE 	3D13
+	field 	SFNode	js_14	USE 	3D14
+	field 	SFNode	js_15	USE 	3D15
+	######################################
+	eventOut	SFInt32		new_mark
+	eventOut	SFRotation		new_rotation
+	
+	url["javascript:
+		function initialize(){
+		#THIS WILL SERVE FOR 3D AUTOMATIC ROTATION
+		#EVERY OBJECT WILL BE TURNING AROUND THE Y COORDINATE
+		new_rotation[0] =  0;
+		new_rotation[1] =  1;
+		new_rotation[2] =  0;
+		new_rotation[3] =  0.05;
+		#VARIABLES TO MAKE VUFORIA RECOGNITION WORK
+		#THIS IS USED SO THAT RECOGNITION IS NOT CALLED EVERY CPU TIME, THIS WILL HELP SO THAT THE 3D OBJECT WILL BE EASILY RECOGNIZABLE
+		lostCounter     = 0;
+		rec  = 0;
+		pos = [0,0];
+		recog=false;
+		translations    = new MFVec3f ();
+		rotations       = new MFRotation ();
+		#WILL CHANGE DATABASES
+		path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+		}
+		function evaluate(val){
+		#WE CHANGE THE VALUE OF THE LAST ROTATION COORDIANATE TO MAKE THE 3D OBJECT TURN
+		new_rotation[3]+=0.05;
+		if(js_scene.whichChoice==2){
+		#will be activated when we use the camera
+		#THIS WILL CHANGE THE COMPASS TO TELL THE PLAYER WHETHER HE IS NEAR OR FAR
+		if(js_mark.onPlayerAround==true){js_compass.whichChoice=0;}
+		if(js_mark.onPlayerAround==false){js_compass.whichChoice=1;}
+		}
+		}
+		function appear(val){
+		if(val<30){
+		#this defines the riddles that are going to be shown, it also sets the theme page we are on for the return button
+		#setup for the return button
+		if(val>10){
+			js_scene.whichChoice=1;
+			js_main.whichChoice=-1;
+			js_riddle.whichChoice=val-11;
+			object_id=val-11;
+			print(object_id.toString());
+		#WE EVALUATE WHAT RIDDLE WAS CHOSEN, WE CHOSE THE DATABASE SO THAT DIFFERENT OBJECTS CAN BE RECOGNIZED
+		switch(val){
+		case 11 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the first riddle of the first theme');
+			js_ar=js_0;
+			js_0.choice=0;
+			break;
+		case 12 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the second riddle of the first theme');
+			js_ar=js_1;
+			js_1.choice=0;
+			break;
+		case 13 :
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the third riddle of the first theme');
+			js_ar=js_2;
+			js_2.choice=0;
+			break;
+		case 14 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the fourth riddle of the first theme');
+			js_ar=js_3;
+			js_3.choice=0;
+			break;
+		case 15 : 
+			path = '/storage/extSdCard/Treasure/Database/beer/Treasure_Hunt.xml';
+			print('the first riddle of the second theme');
+			js_ar=js_4;
+			js_4.choice=0;
+			break;
+		case 16 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the second riddle of the second theme');
+			js_ar=js_5;
+			js_5.choice=0;
+			break;
+		case 17 :
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';	
+			print('the third riddle of the second theme');
+			js_ar=js_6;
+			js_6.choice=0;
+			break;
+		case 18 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the fourth riddle of the second theme');
+			js_ar=js_7;
+			js_7.choice=0;
+			break;
+		case 19 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the first riddle of the third theme');
+			js_ar=js_8;
+			js_8.choice=0;
+			break;
+		case 20 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the second riddle of the third theme');
+			js_ar=js_9;
+			js_9.choice=0;
+			break;
+		case 21 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the third riddle of the third theme');
+			js_ar=js_10;
+			js_10.choice=0;
+			break;
+		case 22 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the fourth riddle of the third theme');
+			js_ar=js_11;
+			js_11.choice=0;
+			break;
+		case 23 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the first riddle of the fourth theme');
+			js_ar=js_12;
+			js_12.choice=0;
+			break;
+		case 24 : 
+			path = '/storage/extSdCard/Treasure/Database/rits/Treasure_Hunt.xml';
+			print('the second riddle of the fourth theme');
+			js_ar=js_13;
+			js_13.choice=0;
+			break;
+		case 25 : 
+			path = '/storage/extSdCard/Treasure/Database/fire/Treasure_Hunt.xml';
+			print('the third riddle of the fourth theme');
+			js_ar=js_14;
+			js_14.choice=0;
+			break;
+		case 26 : 
+			path = '/storage/extSdCard/Treasure/Database/change/Treasure_Hunt.xml';
+			print('the fourth riddle of the fourth theme');
+			js_ar=js_15;
+			js_15.choice=0;
+			break;
+		default : 
+			path = '/storage/extSdCard/Treasure/Database/change/Treasure_Hunt.xml';
+			print('default');
+			break;
+		}
+		#CHANGE THE PATH FOR RECOGNITION
+		js_rec.targetResources[0]=path;
+		
+			}
+		else{
+			#here we are chosing a specific theme and setting the return button
+			new_mark=val;
+			js_main.whichChoice=val;
+			js_page.image_id=100+val;
+			}
+			}
+		else{
+			if(val==40){
+			#SHOW THE CAMERA FRAMES
+			js_scene.whichChoice=2;
+			
+			####################################### LAPTOP TESTING ################################### 
+			#IF YOU WANT TO TEST ON MOBILE, UNCOMMENT THE FOLLOWING LINE
+			switchModel.whichChoice=object_id;
+			####################################### LAPTOP TESTING ################################### 
+			
+			
+			vuforiaTexture.enabled = true;
+			return;
+			}
+			if(val==200){
+			vuforiaTexture.enabled = false;
+			js_scene.whichChoice=1;
+			switchModel.whichChoice=-1;
+			return;
+			}
+			if(js_scene.whichChoice==1){
+			js_compass.whichChoice=-1;
+			js_scene.whichChoice=0;
+			js_main.whichChoice=(js_page.image_id-100);
+			}else{
+			js_compass.whichChoice=-1;
+			js_scene.whichChoice=1;
+			js_main.whichChoice=-1;}
+			}}
+		function onTranslation (translation_result) {
+					translations = translation_result;
+				}
+		function onRotation (rotation_result) {
+					rotations = rotation_result;
+				}
+		function onRecognition(value, timestamp) {
+					detectedID = -1;
+					for ( i = 0; i < value.length; ++i ) {
+						if ( value[i] != 0 ) {
+							detectedID = i;
+							if (detectedID == rec) {
+								if(recog==true){
+								js_ar.translation 	= translations[detectedID];
+								return;}
+                                lostCounter = 0;
+								switchModel.whichChoice=object_id;
+								js_ar.translation 	= translations[detectedID];
+								recog=true;
+                            }
+						}
+					}
+					if ( -1 == detectedID ) {
+						if (lostCounter++ >= 4) {
+						switchModel.whichChoice=-1;
+						recog=false;
+						}
+					}
+				}
+		function HideArObject(val){
+		}
+		"]
+}
+]
+}
+#ROUTES THAT GIVE OUT RECOGNITION SET, AND TO KEEP TRACK OF RECOGNIZED OBJECT
+ROUTE LOC_IMG.onRecognition     TO SCRIPT.onRecognition
+ROUTE LOC_IMG.onTranslation     TO SCRIPT.onTranslation
+ROUTE LOC_IMG.onRotation        TO SCRIPT.onRotation
+#ROUTE THAT GIVES THE PLAYER INFORMATION
+ROUTE Player1.updated_position TO MARKER1.player_pos
+ROUTE SCRIPT.new_mark TO MARKER1.marker_id
+#ROUTES FOR 3D OBJECT ROTATION
+ROUTE SCRIPT.new_rotation TO 3D0.rota
+ROUTE SCRIPT.new_rotation TO 3D1.rota
+ROUTE SCRIPT.new_rotation TO 3D2.rota
+ROUTE SCRIPT.new_rotation TO 3D3.rota
+ROUTE SCRIPT.new_rotation TO 3D4.rota
+ROUTE SCRIPT.new_rotation TO 3D5.rota
+ROUTE SCRIPT.new_rotation TO 3D6.rota
+ROUTE SCRIPT.new_rotation TO 3D7.rota
+ROUTE SCRIPT.new_rotation TO 3D8.rota
+ROUTE SCRIPT.new_rotation TO 3D9.rota
+ROUTE SCRIPT.new_rotation TO 3D10.rota
+ROUTE SCRIPT.new_rotation TO 3D11.rota
+ROUTE SCRIPT.new_rotation TO 3D12.rota
+ROUTE SCRIPT.new_rotation TO 3D13.rota
+ROUTE SCRIPT.new_rotation TO 3D14.rota
+ROUTE SCRIPT.new_rotation TO 3D15.rota
+
+#ROUTES FOR RIDDLE UNLOCK
+ROUTE 3D0.unlock TO THEME_1_2.unlocked
+ROUTE 3D0.lock_image TO THEME_1_2.url
+ROUTE 3D1.unlock TO THEME_1_3.unlocked
+ROUTE 3D1.lock_image TO THEME_1_3.url
+ROUTE 3D2.unlock TO THEME_1_4.unlocked
+ROUTE 3D2.lock_image TO THEME_1_4.url
+ROUTE 3D4.unlock TO THEME_2_2.unlocked
+ROUTE 3D4.lock_image TO THEME_2_2.url
+ROUTE 3D5.unlock TO THEME_2_3.unlocked
+ROUTE 3D5.lock_image TO THEME_2_3.url
+ROUTE 3D6.unlock TO THEME_2_4.unlocked
+ROUTE 3D6.lock_image TO THEME_2_4.url
+ROUTE 3D8.unlock TO THEME_3_2.unlocked
+ROUTE 3D8.lock_image TO THEME_3_2.url
+ROUTE 3D9.unlock TO THEME_3_3.unlocked
+ROUTE 3D9.lock_image TO THEME_3_3.url
+ROUTE 3D10.unlock TO THEME_3_4.unlocked
+ROUTE 3D10.lock_image TO THEME_3_4.url
+ROUTE 3D12.unlock TO THEME_4_2.unlocked
+ROUTE 3D12.lock_image TO THEME_4_2.url
+ROUTE 3D13.unlock TO THEME_4_3.unlocked
+ROUTE 3D13.lock_image TO THEME_4_3.url
+ROUTE 3D14.unlock TO THEME_4_4.unlocked
+ROUTE 3D14.lock_image TO THEME_4_4.url
+
+ROUTE MARKER1.onPlayerAround 	TO SCRIPT.evaluate
+
+#HERE ARE THE ROUTES THAT WILL BE USED IN THE PROCESS 
+ROUTE THEME_1.Onclick TO SCRIPT.appear
+ROUTE THEME_2.Onclick TO SCRIPT.appear
+ROUTE THEME_3.Onclick TO SCRIPT.appear
+ROUTE THEME_4.Onclick TO SCRIPT.appear
+
+ROUTE THEME_1_1.Onclick TO SCRIPT.appear
+ROUTE THEME_1_2.Onclick TO SCRIPT.appear
+ROUTE THEME_1_3.Onclick TO SCRIPT.appear
+ROUTE THEME_1_4.Onclick TO SCRIPT.appear
+
+ROUTE THEME_2_1.Onclick TO SCRIPT.appear
+ROUTE THEME_2_2.Onclick TO SCRIPT.appear
+ROUTE THEME_2_3.Onclick TO SCRIPT.appear
+ROUTE THEME_2_4.Onclick TO SCRIPT.appear
+
+ROUTE THEME_3_1.Onclick TO SCRIPT.appear
+ROUTE THEME_3_2.Onclick TO SCRIPT.appear
+ROUTE THEME_3_3.Onclick TO SCRIPT.appear
+ROUTE THEME_3_4.Onclick TO SCRIPT.appear
+
+ROUTE THEME_4_1.Onclick TO SCRIPT.appear
+ROUTE THEME_4_2.Onclick TO SCRIPT.appear
+ROUTE THEME_4_3.Onclick TO SCRIPT.appear
+ROUTE THEME_4_4.Onclick TO SCRIPT.appear
+
+ROUTE LOGO.Onclick 	  TO SCRIPT.appear
+ROUTE BACK_TO_THEME.Onclick TO SCRIPT.appear
+ROUTE RIDDLE_TO_CAMERA.Onclick TO SCRIPT.appear
+ROUTE BACK_TO_RIDDLE.Onclick TO SCRIPT.appear
+# ### SECTION - MEDIA FILES IMPORT ### #
+AT 0 {
+	UPDATE OD [
+		ObjectDescriptor {	objectDescriptorID 11	esDescr [	ES_Descriptor {	ES_ID 11	muxInfo MuxInfo {fileName "images/Treasure.jpg"}}]}
+		ObjectDescriptor {	objectDescriptorID 12	esDescr [	ES_Descriptor {	ES_ID 12	muxInfo MuxInfo {fileName "images/one.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 13	esDescr [	ES_Descriptor {	ES_ID 13	muxInfo MuxInfo {fileName "images/two.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 14	esDescr [	ES_Descriptor {	ES_ID 14	muxInfo MuxInfo {fileName "images/three.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 15	esDescr [	ES_Descriptor {	ES_ID 15	muxInfo MuxInfo {fileName "images/four.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 16	esDescr [	ES_Descriptor {	ES_ID 16	muxInfo MuxInfo {fileName "images/treasure.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 17	esDescr [	ES_Descriptor {	ES_ID 17	muxInfo MuxInfo {fileName "images/lock1.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 18	esDescr [	ES_Descriptor {	ES_ID 18	muxInfo MuxInfo {fileName "images/lock2.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 19	esDescr [	ES_Descriptor {	ES_ID 19	muxInfo MuxInfo {fileName "images/metal1.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 20	esDescr [	ES_Descriptor {	ES_ID 20	muxInfo MuxInfo {fileName "images/script.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 21	esDescr [	ES_Descriptor {	ES_ID 21	muxInfo MuxInfo {fileName "images/red.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 22	esDescr [	ES_Descriptor {	ES_ID 22	muxInfo MuxInfo {fileName "images/camera.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 23	esDescr [	ES_Descriptor {	ES_ID 23	muxInfo MuxInfo {fileName "images/metal2.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 24	esDescr [	ES_Descriptor {	ES_ID 24	muxInfo MuxInfo {fileName "images/redcomp.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 25	esDescr [	ES_Descriptor {	ES_ID 25	muxInfo MuxInfo {fileName "images/greencomp.png"}}]}
+		ObjectDescriptor {	objectDescriptorID 26	esDescr [	ES_Descriptor {	ES_ID 26	muxInfo MuxInfo {fileName "arobjects/general.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 27	esDescr [	ES_Descriptor {	ES_ID 27	muxInfo MuxInfo {fileName "arobjects/bellranger.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 28	esDescr [	ES_Descriptor {	ES_ID 28	muxInfo MuxInfo {fileName "arobjects/earth.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 29	esDescr [	ES_Descriptor {	ES_ID 29	muxInfo MuxInfo {fileName "arobjects/hydrant.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 30	esDescr [	ES_Descriptor {	ES_ID 30	muxInfo MuxInfo {fileName "arobjects/gangster.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 31	esDescr [	ES_Descriptor {	ES_ID 31	muxInfo MuxInfo {fileName "arobjects/junk2.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 32	esDescr [	ES_Descriptor {	ES_ID 32	muxInfo MuxInfo {fileName "arobjects/lightcycle.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 33	esDescr [	ES_Descriptor {	ES_ID 33	muxInfo MuxInfo {fileName "arobjects/porch.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 34	esDescr [	ES_Descriptor {	ES_ID 34	muxInfo MuxInfo {fileName "arobjects/stratocaster.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 35	esDescr [	ES_Descriptor {	ES_ID 35	muxInfo MuxInfo {fileName "arobjects/top.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 36	esDescr [	ES_Descriptor {	ES_ID 36	muxInfo MuxInfo {fileName "arobjects/jet.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 37	esDescr [	ES_Descriptor {	ES_ID 37	muxInfo MuxInfo {fileName "arobjects/dolphins.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 38	esDescr [	ES_Descriptor {	ES_ID 38	muxInfo MuxInfo {fileName "arobjects/honda.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 39	esDescr [	ES_Descriptor {	ES_ID 39	muxInfo MuxInfo {fileName "arobjects/house1.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 40	esDescr [	ES_Descriptor {	ES_ID 40	muxInfo MuxInfo {fileName "arobjects/temp.wrl"}}]}
+		ObjectDescriptor {	objectDescriptorID 41	esDescr [	ES_Descriptor {	ES_ID 41	muxInfo MuxInfo {fileName "arobjects/triceratops.wrl"}}]}
+		ObjectDescriptor {  objectDescriptorID 201  esDescr [   ES_Descriptor { ES_ID 201   decConfigDescr DecoderConfigDescriptor { streamType 10 decSpecificInfo UIConfig { deviceName "MPEG-V:siv:GlobalPositionSensorType"}}}]}
+	]
+}
+
+
+
+
+
+
+
+
 
